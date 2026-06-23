@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cat Gallery</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #1a1a2e;
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 28px;
+      padding: 32px;
+    }
+
+    h1 {
+      font-size: 2rem;
+      letter-spacing: -0.5px;
+    }
+
+    h1 span { color: #e74c3c; }
+
+    .gallery {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .img-wrap {
+      width: 480px;
+      height: 360px;
+      border-radius: 20px;
+      overflow: hidden;
+      background: #16213e;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 32px rgba(0,0,0,.4);
+    }
+
+    #cat-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: none;
+      transition: opacity .3s;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #333;
+      border-top-color: #e74c3c;
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .counter {
+      font-size: .9rem;
+      color: #888;
+      min-height: 20px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 16px;
+    }
+
+    .btn {
+      padding: 12px 32px;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .2s, transform .1s, opacity .2s;
+    }
+    .btn:active { transform: scale(.96); }
+    .btn:disabled { opacity: .35; cursor: default; }
+
+    .btn--prev {
+      background: #16213e;
+      color: #fff;
+      border: 2px solid #333;
+    }
+    .btn--prev:hover:not(:disabled) { background: #0f3460; border-color: #0f3460; }
+
+    .btn--next {
+      background: #e74c3c;
+      color: #fff;
+    }
+    .btn--next:hover:not(:disabled) { background: #c0392b; }
+
+    .error {
+      color: #e74c3c;
+      font-size: .9rem;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+<h1>🐱 Cat <span>Gallery</span></h1>
+
+<div class="gallery">
+  <div class="img-wrap">
+    <div class="spinner" id="spinner"></div>
+    <img id="cat-image" alt="cat" />
+  </div>
+
+  <p class="counter" id="counter"></p>
+
+  <div class="controls">
+    <button class="btn btn--prev" id="btn-prev" disabled>← PREVIOUS</button>
+    <button class="btn btn--next" id="btn-next">NEXT →</button>
+  </div>
+
+  <p class="error" id="error">ошибка еще раз.</p>
+</div>
+
+<script>
+  const API_KEY = 'live_gtGHWauzNkitc2xFbZ8aZRal0kd1UEILOdazowTXo4TBCE6HXx6TQ0xnyIyVsvCz';
+  const API_URL = 'https://api.thecatapi.com/v1/images/search';
+
+  const imgEl     = document.getElementById('cat-image');
+  const spinner   = document.getElementById('spinner');
+  const counter   = document.getElementById('counter');
+  const btnPrev   = document.getElementById('btn-prev');
+  const btnNext   = document.getElementById('btn-next');
+  const errorEl   = document.getElementById('error');
+
+  const history = [];
+  let current = -1;
+  let loading = false;
+
+  function setLoading(state) {
+    loading = state;
+    spinner.style.display  = state ? 'block' : 'none';
+    imgEl.style.display    = state ? 'none'  : 'block';
+    btnNext.disabled       = state;
+    errorEl.style.display  = 'none';
+  }
+
+  function updateCounter() {
+    counter.textContent = history.length
+      ? `${current + 1} / ${history.length}`
+      : '';
+    btnPrev.disabled = current <= 0;
+    btnNext.disabled = loading;
+  }
+
+  function showImage(url) {
+    imgEl.style.opacity = '0';
+    imgEl.src = url;
+    imgEl.onload = function () {
+      imgEl.style.opacity = '1';
+    };
+  }
+
+  function fetchRandomCatImage() {
+    setLoading(true);
+
+    fetch(`${API_URL}?api_key=${API_KEY}`)
+      .then(function(response) {
+        if (!response.ok) {
+          throw new Error('HTTP ' + response.status);
+        }
+        return response.json();
+      })
+      .then(function(data) {
+        const url = data[0].url;
+        history.splice(current + 1);
+        history.push(url);
+        current = history.length - 1;
+        setLoading(false);
+        showImage(url);
+        updateCounter();
+      })
+      .catch(function(err) {
+        console.error('Помилка запиту:', err);
+        setLoading(false);
+        spinner.style.display = 'none';
+        errorEl.style.display = 'block';
+        updateCounter();
+      });
+  }
+
+  btnNext.addEventListener('click', function() {
+    if (current < history.length - 1) {
+      current++;
+      showImage(history[current]);
+      updateCounter();
+    } else {
+      fetchRandomCatImage();
+    }
+  });
+
+  btnPrev.addEventListener('click', function() {
+    if (current > 0) {
+      current--;
+      showImage(history[current]);
+      updateCounter();
+    }
+  });
+
+  fetchRandomCatImage();
+</script>
+
+</body>
+</html>
