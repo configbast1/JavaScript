@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Магазин товарів</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f5f5f5;
+      color: #1a1a2e;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #fff;
+      box-shadow: 0 2px 8px rgba(0,0,0,.08);
+      padding: 18px 40px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    header h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #e74c3c;
+      letter-spacing: -0.5px;
+    }
+    header span { font-size: 1.8rem; }
+
+    main {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 32px 24px;
+    }
+
+    .section-title {
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin-bottom: 24px;
+      color: #1a1a2e;
+    }
+
+    .products-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 20px;
+    }
+
+    @media (max-width: 1200px) { .products-grid { grid-template-columns: repeat(4, 1fr); } }
+    @media (max-width: 900px)  { .products-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 600px)  { .products-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 380px)  { .products-grid { grid-template-columns: 1fr; } }
+
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 2px 8px rgba(0,0,0,.06);
+      transition: transform .2s, box-shadow .2s;
+      cursor: pointer;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(0,0,0,.12);
+    }
+
+    .card__img-wrap {
+      position: relative;
+      overflow: hidden;
+      aspect-ratio: 1;
+      background: #f0f0f0;
+    }
+    .card__img-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform .35s;
+    }
+    .card:hover .card__img-wrap img {
+      transform: scale(1.05);
+    }
+
+    .card__badge {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: #e74c3c;
+      color: #fff;
+      font-size: .7rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+      letter-spacing: .5px;
+    }
+
+    .card__body {
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex: 1;
+    }
+
+    .card__name {
+      font-size: .9rem;
+      font-weight: 600;
+      line-height: 1.35;
+      color: #1a1a2e;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .card__stars {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .stars {
+      display: flex;
+      gap: 1px;
+    }
+    .stars span { font-size: .9rem; color: #ddd; }
+    .stars span.filled { color: #f5a623; }
+    .stars span.half   { color: #f5a623; opacity: .6; }
+
+    .card__rating-num {
+      font-size: .75rem;
+      color: #888;
+    }
+
+    .card__prices {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .card__price-old {
+      font-size: .8rem;
+      color: #999;
+      text-decoration: line-through;
+    }
+    .card__price-new {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #e74c3c;
+    }
+    .card__discount {
+      font-size: .72rem;
+      color: #27ae60;
+      font-weight: 600;
+    }
+
+    .card__btn {
+      margin-top: auto;
+      padding: 10px;
+      background: #e74c3c;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: .85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .2s, transform .1s;
+      width: 100%;
+    }
+    .card__btn:hover  { background: #c0392b; }
+    .card__btn:active { transform: scale(.97); }
+  </style>
+</head>
+<body>
+
+<header>
+  <span>🛒</span>
+  <h1>NexusShop</h1>
+</header>
+
+<main>
+  <p class="section-title">Популярні товари</p>
+  <div class="products-grid" id="grid"></div>
+</main>
+
+<script>
+  class Product {
+    constructor(imageUrl, name, rating, price, discountedPrice) {
+      this.imageUrl        = imageUrl;
+      this.name            = name;
+      this.rating          = rating;
+      this.price           = price;
+      this.discountedPrice = discountedPrice;
+    }
+
+    _buildStars() {
+      const wrap = document.createElement('div');
+      wrap.className = 'stars';
+
+      const full = Math.floor(this.rating);
+      const half = this.rating % 1 >= 0.5;
+
+      for (let i = 1; i <= 5; i++) {
+        const s = document.createElement('span');
+        if (i <= full)                    { s.textContent = '★'; s.className = 'filled'; }
+        else if (i === full + 1 && half)  { s.textContent = '★'; s.className = 'half'; }
+        else                              { s.textContent = '☆'; }
+        wrap.appendChild(s);
+      }
+      return wrap;
+    }
+
+    render() {
+      const discountPct = Math.round((1 - this.discountedPrice / this.price) * 100);
+
+      const card = document.createElement('div');
+      card.className = 'card';
+
+      const imgWrap = document.createElement('div');
+      imgWrap.className = 'card__img-wrap';
+
+      const img = document.createElement('img');
+      img.src     = this.imageUrl;
+      img.alt     = this.name;
+      img.loading = 'lazy';
+      imgWrap.appendChild(img);
+
+      const badge = document.createElement('span');
+      badge.className   = 'card__badge';
+      badge.textContent = `-${discountPct}%`;
+      imgWrap.appendChild(badge);
+
+      card.appendChild(imgWrap);
+
+      const body = document.createElement('div');
+      body.className = 'card__body';
+
+      const nameEl = document.createElement('p');
+      nameEl.className   = 'card__name';
+      nameEl.textContent = this.name;
+      body.appendChild(nameEl);
+
+      const starsRow = document.createElement('div');
+      starsRow.className = 'card__stars';
+      starsRow.appendChild(this._buildStars());
+      const ratingNum = document.createElement('span');
+      ratingNum.className   = 'card__rating-num';
+      ratingNum.textContent = `(${this.rating.toFixed(1)})`;
+      starsRow.appendChild(ratingNum);
+      body.appendChild(starsRow);
+
+      const prices = document.createElement('div');
+      prices.className = 'card__prices';
+
+      const priceOld = document.createElement('span');
+      priceOld.className   = 'card__price-old';
+      priceOld.textContent = `${this.price.toFixed(2)} ₴`;
+
+      const priceNew = document.createElement('span');
+      priceNew.className   = 'card__price-new';
+      priceNew.textContent = `${this.discountedPrice.toFixed(2)} ₴`;
+
+      const saving = document.createElement('span');
+      saving.className   = 'card__discount';
+      saving.textContent = `Економія ${(this.price - this.discountedPrice).toFixed(2)} ₴`;
+
+      prices.appendChild(priceOld);
+      prices.appendChild(priceNew);
+      prices.appendChild(saving);
+      body.appendChild(prices);
+
+      const btn = document.createElement('button');
+      btn.className   = 'card__btn';
+      btn.textContent = '🛒 Додати в кошик';
+      body.appendChild(btn);
+
+      card.appendChild(body);
+      return card;
+    }
+  }
+
+  class ProductGenerator {
+    constructor() {
+      this._names = [
+        'Бездротові навушники Sony WH-1000XM5',
+        'Ігрова миша Logitech G Pro X Superlight',
+        'Механічна клавіатура HyperX Alloy Origins',
+        'Монітор Samsung 27" 144Hz IPS',
+        'Веб-камера Logitech C920 HD Pro',
+        'SSD накопичувач Samsung 970 EVO 1TB',
+        'Ігровий контролер DualSense PS5',
+        'Смарт-годинник Apple Watch SE 2',
+        'Портативна колонка JBL Charge 5',
+        'Навушники AirPods Pro 2nd Gen',
+        'Ноутбук ASUS ROG Zephyrus G14',
+        'Планшет iPad Air 5 256GB',
+        'Смартфон Samsung Galaxy S24 Ultra',
+        'Відеокарта Gigabyte RTX 4060 Ti',
+        'Процесор Intel Core i7-14700K',
+        'Оперативна пам\'ять Kingston DDR5 32GB',
+        'Блок живлення Corsair RM750x',
+        'Кулер CPU Noctua NH-D15 Chromax',
+        'Роутер ASUS RT-AX88U AX6000',
+        'Зовнішній диск Seagate Backup Plus 2TB',
+        'USB-хаб Anker 10-Port PowerIQ',
+        'Ігровий стілець DXRacer Formula Series',
+        'Мікрофон Blue Yeti USB Condenser',
+        'Карта захоплення ElGato HD60 S+',
+        'Ігровий монітор LG UltraGear 32" 4K'
+      ];
+    }
+
+    _rand(min, max) {
+      return Math.random() * (max - min) + min;
+    }
+
+    generate(productsCount) {
+      const grid = document.getElementById('grid');
+      if (!grid) return;
+
+      for (let i = 0; i < productsCount; i++) {
+        const price           = parseFloat(this._rand(500, 15000).toFixed(2));
+        const discountPct     = parseFloat(this._rand(5, 40).toFixed(0));
+        const discountedPrice = parseFloat((price * (1 - discountPct / 100)).toFixed(2));
+        const rating          = parseFloat(this._rand(3.0, 5.0).toFixed(1));
+        const name            = this._names[i % this._names.length];
+        const imageUrl        = `https://picsum.photos/seed/${i + 10}/300/300`;
+
+        const product = new Product(imageUrl, name, rating, price, discountedPrice);
+        grid.appendChild(product.render());
+      }
+    }
+  }
+
+  const generator = new ProductGenerator();
+  generator.generate(25);
+</script>
+
+</body>
+</html>
